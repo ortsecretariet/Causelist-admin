@@ -122,8 +122,13 @@ uploadInput.addEventListener("change", async (event) => {
         uploadStatus.innerText = `Parsing file ${index + 1}/${files.length}: ${file.name}`;
         try {
             const text = await extractTextFromFile(file);
+            const parsed = parseCauseListText(text);
+            console.groupCollapsed(`[${file.name}] extracted text (first 40 lines):`);
+            console.log((text || "").split("\n").slice(0, 40).join("\n"));
+            console.groupEnd();
+            console.log(`[${file.name}] parsed ${parsed.length} matter(s)`);
             mergedData.push(
-                ...parseCauseListText(text).map((item) => ({
+                ...parsed.map((item) => ({
                     ...item,
                     sourceFile: file.name
                 }))
@@ -135,9 +140,12 @@ uploadInput.addEventListener("change", async (event) => {
     }
 
     if (mergedData.length === 0) {
-        uploadStatus.innerText = `Parsed 0/${files.length}. Failed: ${failedFiles.length}`;
+        uploadStatus.innerText = `Parsed 0/${files.length}. Failed: ${failedFiles.length}. Check browser console for extracted text.`;
+        uploadStatus.style.color = "#ff4444";
         return;
     }
+
+    const parsedFiles = files.length - failedFiles.length;
 
     // --- PAST-DATE REJECTION ---
     const pastDateFiles = mergedData.filter((m) => isDatePast(m.date));
