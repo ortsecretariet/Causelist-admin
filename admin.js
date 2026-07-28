@@ -31,6 +31,8 @@ const newsList = document.getElementById("newsList");
 const previewToggleBtn = document.getElementById("previewToggleBtn");
 const previewPanel = document.getElementById("previewPanel");
 const previewBody = document.getElementById("previewBody");
+const loadingOverlay = document.getElementById("loadingOverlay");
+const loadingText = document.getElementById("loadingText");
 
 let currentAnnouncements = {};
 let currentMatters = [];
@@ -109,17 +111,26 @@ function partitionMattersByExpiry(matters) {
     });
     return { current, expired };
 }
+function showLoading(message) {
+    if (loadingText) loadingText.innerText = message || "Parsing matters...";
+    if (loadingOverlay) loadingOverlay.style.display = "flex";
+}
+
+function hideLoading() {
+    if (loadingOverlay) loadingOverlay.style.display = "none";
+}
+
 uploadInput.addEventListener("change", async (event) => {
     const files = Array.from(event.target.files || []);
     if (files.length === 0) return;
 
-    uploadStatus.innerText = `Reading ${files.length} file(s)...`;
+    showLoading(`Reading ${files.length} file(s)...`);
     const mergedData = [];
     const failedFiles = [];
 
     for (let index = 0; index < files.length; index++) {
         const file = files[index];
-        uploadStatus.innerText = `Parsing file ${index + 1}/${files.length}: ${file.name}`;
+        showLoading(`Parsing file ${index + 1}/${files.length}: ${file.name}`);
         try {
             const text = await extractTextFromFile(file);
             const parsed = parseCauseListText(text);
@@ -138,6 +149,8 @@ uploadInput.addEventListener("change", async (event) => {
             failedFiles.push(file.name);
         }
     }
+
+    hideLoading();
 
     if (mergedData.length === 0) {
         uploadStatus.innerText = `Parsed 0/${files.length}. Failed: ${failedFiles.length}. Check browser console for extracted text.`;

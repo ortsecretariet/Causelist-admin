@@ -141,6 +141,10 @@
                     <button id="clearDataBtn" class="admin-danger-btn">Clear All Matters</button>
                 </div>
                 <span id="uploadStatus">System Ready.</span>
+                <div id="loadingOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:2000; justify-content:center; align-items:center; flex-direction:column; gap:15px;">
+                    <div class="spinner"></div>
+                    <p id="loadingText" style="color:#cfa92d; font-size:1rem; font-weight:600;">Parsing matters...</p>
+                </div>
                 <div id="previewPanel" style="display:none; margin-top:15px;">
                     <div id="previewBody" style="max-height:400px; overflow-y:auto; background:rgba(0,0,0,0.3); border-radius:8px; padding:10px;"></div>
                 </div>
