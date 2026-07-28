@@ -146,6 +146,47 @@
                 </div>
             </section>
 
+            <!-- Edit Matter Modal -->
+            <div id="editModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:1000; justify-content:center; align-items:center;">
+                <div style="background:#081f0e; border:2px solid #cfa92d; border-radius:12px; padding:25px; max-width:600px; width:90%; max-height:90vh; overflow-y:auto;">
+                    <h2 style="color:#cfa92d; margin-top:0;">Edit Matter</h2>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                        <div>
+                            <label style="color:#9fb8a5; font-size:0.85rem; display:block; margin-bottom:4px;">Date</label>
+                            <input id="editDate" type="text" style="width:100%; background:#06140a; border:1px solid #14592a; color:#fff; padding:8px; border-radius:6px; font-size:0.9rem;">
+                        </div>
+                        <div>
+                            <label style="color:#9fb8a5; font-size:0.85rem; display:block; margin-bottom:4px;">Tribunal</label>
+                            <input id="editTribunal" type="text" style="width:100%; background:#06140a; border:1px solid #14592a; color:#fff; padding:8px; border-radius:6px; font-size:0.9rem;">
+                        </div>
+                        <div>
+                            <label style="color:#9fb8a5; font-size:0.85rem; display:block; margin-bottom:4px;">Officer</label>
+                            <input id="editOfficer" type="text" style="width:100%; background:#06140a; border:1px solid #14592a; color:#fff; padding:8px; border-radius:6px; font-size:0.9rem;">
+                        </div>
+                        <div>
+                            <label style="color:#9fb8a5; font-size:0.85rem; display:block; margin-bottom:4px;">Type</label>
+                            <input id="editType" type="text" style="width:100%; background:#06140a; border:1px solid #14592a; color:#fff; padding:8px; border-radius:6px; font-size:0.9rem;">
+                        </div>
+                        <div>
+                            <label style="color:#9fb8a5; font-size:0.85rem; display:block; margin-bottom:4px;">Case No.</label>
+                            <input id="editCaseNo" type="text" style="width:100%; background:#06140a; border:1px solid #14592a; color:#fff; padding:8px; border-radius:6px; font-size:0.9rem;">
+                        </div>
+                        <div>
+                            <label style="color:#9fb8a5; font-size:0.85rem; display:block; margin-bottom:4px;">Time</label>
+                            <input id="editTime" type="text" style="width:100%; background:#06140a; border:1px solid #14592a; color:#fff; padding:8px; border-radius:6px; font-size:0.9rem;">
+                        </div>
+                    </div>
+                    <div style="margin-top:10px;">
+                        <label style="color:#9fb8a5; font-size:0.85rem; display:block; margin-bottom:4px;">Case Line (full text)</label>
+                        <textarea id="editCaseLine" rows="2" style="width:100%; background:#06140a; border:1px solid #14592a; color:#fff; padding:8px; border-radius:6px; font-size:0.9rem; resize:vertical;"></textarea>
+                    </div>
+                    <div style="display:flex; gap:10px; margin-top:15px; justify-content:flex-end;">
+                        <button id="editCancelBtn" class="admin-danger-btn" style="padding:8px 16px; font-size:0.85rem;">Cancel</button>
+                        <button id="editSaveBtn" class="admin-success-btn" style="padding:8px 16px; font-size:0.85rem;">Save Changes</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- News Management -->
             <section class="admin-card">
                 <h2>2. Urgent Announcements</h2>

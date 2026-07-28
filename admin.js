@@ -500,6 +500,7 @@ postAnnouncementBtn.addEventListener("click", () => {
 
 // --- DASHBOARD PREVIEW ---
 let previewVisible = false;
+let editingIndex = -1;
 
 function renderPreview() {
     if (!previewBody) return;
@@ -517,8 +518,10 @@ function renderPreview() {
         <th style="padding:4px 6px; text-align:left; color:#cfa92d;">Type</th>
         <th style="padding:4px 6px; text-align:left; color:#cfa92d;">Case No.</th>
         <th style="padding:4px 6px; text-align:left; color:#cfa92d;">Time</th>
+        <th style="padding:4px 6px; text-align:center; color:#cfa92d;">Actions</th>
     </tr></thead><tbody>`;
-    current.slice(0, 50).forEach((m) => {
+    current.forEach((m, idx) => {
+        const originalIdx = currentMatters.indexOf(m);
         html += `<tr style="border-bottom:1px solid rgba(207,169,45,0.15);">
             <td style="padding:3px 6px; color:#fff;">${m.date || "-"}</td>
             <td style="padding:3px 6px; color:#cfa92d;">${m.tribunal || "-"}</td>
@@ -526,13 +529,97 @@ function renderPreview() {
             <td style="padding:3px 6px; color:#fff;">${m.matterType || "-"}</td>
             <td style="padding:3px 6px; color:#fff;">${m.caseNo || "-"}</td>
             <td style="padding:3px 6px; color:#fff;">${m.time || "-"}</td>
+            <td style="padding:3px 6px; text-align:center; white-space:nowrap;">
+                <button class="preview-edit-btn" data-idx="${originalIdx}">Edit</button>
+                <button class="preview-delete-btn" data-idx="${originalIdx}">Delete</button>
+            </td>
         </tr>`;
     });
     if (current.length > 50) {
-        html += `<tr><td colspan="6" style="padding:4px 6px; color:#9fb8a5; text-align:center;">... and ${current.length - 50} more</td></tr>`;
+        html += `<tr><td colspan="7" style="padding:4px 6px; color:#9fb8a5; text-align:center;">... and ${current.length - 50} more</td></tr>`;
     }
     html += `</tbody></table>`;
     previewBody.innerHTML = html;
+
+    previewBody.querySelectorAll(".preview-delete-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+            const idx = parseInt(e.target.dataset.idx, 10);
+            if (confirm("Delete this matter from published data?")) {
+                deleteMatterByIndex(idx);
+            }
+        });
+    });
+    previewBody.querySelectorAll(".preview-edit-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+            const idx = parseInt(e.target.dataset.idx, 10);
+            openEditModal(idx);
+        });
+    });
+}
+
+function deleteMatterByIndex(idx) {
+    if (!Number.isInteger(idx) || idx < 0 || idx >= currentMatters.length) return;
+    const updated = [...currentMatters];
+    updated.splice(idx, 1);
+    set(ref(db, 'publishedData/matters'), updated).then(() => {
+        if (uploadStatus) {
+            uploadStatus.innerText = `Deleted matter at index ${idx}. Total: ${updated.length}`;
+            uploadStatus.style.color = "#39FF14";
+        }
+    }).catch((err) => {
+        console.error("Delete failed:", err);
+        if (uploadStatus) {
+            uploadStatus.innerText = "Delete failed. Check permissions.";
+            uploadStatus.style.color = "#ff4444";
+        }
+    });
+}
+
+function openEditModal(idx) {
+    if (!Number.isInteger(idx) || idx < 0 || idx >= currentMatters.length) return;
+    editingIndex = idx;
+    const m = currentMatters[idx];
+    document.getElementById("editDate").value = m.date || "";
+    document.getElementById("editTribunal").value = m.tribunal || "";
+    document.getElementById("editOfficer").value = m.officer || "";
+    document.getElementById("editType").value = m.matterType || "";
+    document.getElementById("editCaseNo").value = m.caseNo || "";
+    document.getElementById("editTime").value = m.time || "";
+    document.getElementById("editCaseLine").value = m.caseLine || "";
+    document.getElementById("editModal").style.display = "block";
+}
+
+function saveEditedMatter() {
+    if (editingIndex < 0 || editingIndex >= currentMatters.length) return;
+    const updated = [...currentMatters];
+    updated[editingIndex] = {
+        ...updated[editingIndex],
+        date: document.getElementById("editDate").value.trim(),
+        tribunal: document.getElementById("editTribunal").value.trim(),
+        officer: document.getElementById("editOfficer").value.trim(),
+        matterType: document.getElementById("editType").value.trim(),
+        caseNo: document.getElementById("editCaseNo").value.trim(),
+        time: document.getElementById("editTime").value.trim(),
+        caseLine: document.getElementById("editCaseLine").value.trim(),
+    };
+    set(ref(db, 'publishedData/matters'), updated).then(() => {
+        document.getElementById("editModal").style.display = "none";
+        if (uploadStatus) {
+            uploadStatus.innerText = `Matter updated.`;
+            uploadStatus.style.color = "#39FF14";
+        }
+    }).catch((err) => {
+        console.error("Update failed:", err);
+        if (uploadStatus) {
+            uploadStatus.innerText = "Update failed. Check permissions.";
+            uploadStatus.style.color = "#ff4444";
+        }
+    });
+}
+
+function closeEditModal() {
+    document.getElementById("editModal").style.display = "none";
+    editingIndex = -1;
 }
 
 if (previewToggleBtn) {
@@ -546,5 +633,10 @@ if (previewToggleBtn) {
         }
     });
 }
+
+const editSaveBtn = document.getElementById("editSaveBtn");
+const editCancelBtn = document.getElementById("editCancelBtn");
+if (editSaveBtn) editSaveBtn.addEventListener("click", saveEditedMatter);
+if (editCancelBtn) editCancelBtn.addEventListener("click", closeEditModal);
 
 
