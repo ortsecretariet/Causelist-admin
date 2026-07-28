@@ -313,25 +313,21 @@ const CASE_PREFIX_MAP = {
     TATC: "TAT",
     EPA: "EPT",
     EPT: "EPT",
+    TRLAP: "TRLAP",
 };
 
 function tribunalFromCaseNo(caseNo) {
     if (!caseNo) return "";
     const cleaned = caseNo.toUpperCase();
-    // Extract everything before the first slash that is followed by a digit
-    // (this is the start of the case number portion).
-    // e.g. "NAIROBI_RRC/783/2019" → prefix "NAIROBI_RRC"
-    //      "EPA/E051/2025"       → prefix "EPA"
-    const slashMatch = cleaned.match(/^(.+?)(?=\/\d)/);
+    const slashMatch = cleaned.match(/^(.+?)(?=\/[A-Z0-9])/);
     const prefix = slashMatch ? slashMatch[1] : "";
-    // Try the full prefix directly.
+    if (!prefix) return "";
     if (CASE_PREFIX_MAP[prefix]) return CASE_PREFIX_MAP[prefix];
-    // Try splitting by underscores and slashes to find a known code segment.
     const segments = prefix.split(/[_/]/);
     for (const seg of segments) {
         if (CASE_PREFIX_MAP[seg]) return CASE_PREFIX_MAP[seg];
     }
-    return "";
+    return prefix.length >= 2 ? prefix : "";
 }
 
 // Normalize a header token into a short tribunal name.
@@ -422,7 +418,7 @@ function parseCauseListText(fullText) {
         const dateMatch = line.match(/([A-Z]+),\s*(\d{1,2}(?:st|nd|rd|th)?)\s+([A-Z]+)\s+(\d{4})/i);
         if (dateMatch) { currentDate = dateMatch[1].toUpperCase() + ", " + dateMatch[2].replace(/(st|nd|rd|th)$/i, "") + " " + dateMatch[3].toUpperCase() + " " + dateMatch[4]; i++; continue; }
         if (line.match(/^\d{1,2}:\d{2}\s?(AM|PM)$/i)) { currentTime = line.toUpperCase(); i++; continue; }
-        if (line.match(/^(HEARING|MENTION|RULING|JUDGMENT|JUDGEMENT)$/i)) { currentMatterType = line.toUpperCase(); i++; continue; }
+        if (line.match(/^(HEARING|MENTION|RULING|JUDGMENT|JUDGEMENT)\b/i)) { currentMatterType = line.match(/^(HEARING|MENTION|RULING|JUDGMENT|JUDGEMENT)\b/i)[1].toUpperCase(); i++; continue; }
         if (line.includes("HON.") || line.match(/^(MR|MRS|MS|DR)\.\s/i)) {
             // Officer lists may wrap across several lines, e.g.:
             //   "HON. A, HON. B, HON. GLORIA"
@@ -469,10 +465,9 @@ function parseCauseListText(fullText) {
         // Tribunal resolution priority:
         //  1) case-number prefix (most reliable per-matter signal; e.g. TATC -> TAT)
         //  2) tribunal name detected from a valid header line
-        //  3) hard default
-        // Preferring the case number prevents a repeated/incomplete header from
-        // mislabelling matters that clearly belong to a specific tribunal.
-        const tribunal = tribunalFromCaseNo(caseNo) || currentTribunal || "BPRT";
+        // If neither is available, the tribunal stays empty rather than being
+        // forced to a wrong value like "BPRT".
+        const tribunal = tribunalFromCaseNo(caseNo) || currentTribunal;
         allData.push({
             date: currentDate, tribunal, officer: currentOfficer || "HON. -",
             matterType: currentMatterType || "UNSPECIFIED", caseNo, caseLine: fullMatterLine,
