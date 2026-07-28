@@ -83,3 +83,55 @@ body {
 .delete-news-btn:hover {
     background: #991b1b;
 }
+/* Dashboard Preview Panel */
+#previewPanel {
+    margin-top: 15px;
+}
+
+#previewToggleBtn {
+    background: #1a3a1a;
+    color: #cfa92d;
+    border: 1px solid #cfa92d;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+#previewToggleBtn:hover {
+    background: #2a4a2a;
+}
+
+#previewBody table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+}
+
+#previewBody th {
+    padding: 6px 8px;
+    text-align: left;
+    color: #cfa92d;
+    border-bottom: 2px solid #cfa92d;
+}
+
+#previewBody td {
+    padding: 4px 8px;
+    color: #fff;
+    border-bottom: 1px solid rgba(207,169,45,0.15);
+}
+
+#previewBody tr:hover {
+    background: rgba(207,169,45,0.05);
+}
+
+.preview-info {
+    color: #9fb8a5;
+    font-size: 0.8rem;
+    margin-bottom: 8px;
+}
+
+.preview-empty {
+    color: #9fb8a5;
+    font-size: 0.85rem;
+}

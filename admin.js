@@ -28,14 +28,24 @@ const clearDataBtn = document.getElementById("clearDataBtn");
 const announcementInput = document.getElementById("announcementInput");
 const postAnnouncementBtn = document.getElementById("postAnnouncementBtn");
 const newsList = document.getElementById("newsList");
+const previewToggleBtn = document.getElementById("previewToggleBtn");
+const previewPanel = document.getElementById("previewPanel");
+const previewBody = document.getElementById("previewBody");
 
 let currentAnnouncements = {};
 let currentMatters = [];
 let uploadMode = "replace"; // "replace" or "append"
 
-// Sync current matters for appending
+// Sync current matters for appending, auto-clean expired matters, and refresh preview.
 onValue(ref(db, 'publishedData/matters'), (snap) => {
     currentMatters = snap.val() || [];
+    const { expired } = partitionMattersByExpiry(currentMatters);
+    if (expired.length > 0) {
+        console.log(`Auto-removing ${expired.length} expired matter(s) from published data.`);
+        const currentOnly = currentMatters.filter((m) => !isDatePast(m.date));
+        set(ref(db, 'publishedData/matters'), currentOnly);
+    }
+    if (previewVisible) renderPreview();
 });
 
 async function sha256(value) {
@@ -59,7 +69,46 @@ async function enforceAdminPasscode() {
 
 enforceAdminPasscode();
 
-// --- PDF PROCESSING ---
+// --- DATE HELPERS ---
+
+// Parse a date string like "TUESDAY, 28 JULY 2026" into a Date object.
+function parseDateString(dateStr) {
+    if (!dateStr) return null;
+    const months = {
+        JANUARY: 0, FEBRUARY: 1, MARCH: 2, APRIL: 3, MAY: 4, JUNE: 5,
+        JULY: 6, AUGUST: 7, SEPTEMBER: 8, OCTOBER: 9, NOVEMBER: 10, DECEMBER: 11,
+    };
+    const match = dateStr.match(/([A-Z]+),\s*(\d{1,2})\s+([A-Z]+)\s+(\d{4})/i);
+    if (!match) return null;
+    const day = parseInt(match[2], 10);
+    const month = months[match[3].toUpperCase()];
+    const year = parseInt(match[4], 10);
+    if (month === undefined || isNaN(day) || isNaN(year)) return null;
+    return new Date(year, month, day);
+}
+
+// Check whether a date string represents a date that has already passed.
+function isDatePast(dateStr) {
+    const date = parseDateString(dateStr);
+    if (!date) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return date < today;
+}
+
+// Separate matters into expired (past date) and current (today or future).
+function partitionMattersByExpiry(matters) {
+    const current = [];
+    const expired = [];
+    matters.forEach((m) => {
+        if (isDatePast(m.date)) {
+            expired.push(m);
+        } else {
+            current.push(m);
+        }
+    });
+    return { current, expired };
+}
 uploadInput.addEventListener("change", async (event) => {
     const files = Array.from(event.target.files || []);
     if (files.length === 0) return;
@@ -90,16 +139,41 @@ uploadInput.addEventListener("change", async (event) => {
         return;
     }
 
-    let finalData = mergedData;
+    // --- PAST-DATE REJECTION ---
+    const pastDateFiles = mergedData.filter((m) => isDatePast(m.date));
+    if (pastDateFiles.length === mergedData.length) {
+        uploadStatus.innerText = `Rejected: All ${mergedData.length} matter(s) have past dates. Upload current/non-expired matters only.`;
+        uploadStatus.style.color = "#ff4444";
+        return;
+    }
+
+    // --- EXPIRED MATTER FILTERING ---
+    const { current: validMatters, expired: removedMatters } = partitionMattersByExpiry(mergedData);
+    if (removedMatters.length > 0) {
+        uploadStatus.innerText = `Warning: ${removedMatters.length} expired matter(s) removed. Publishing ${validMatters.length} current matter(s).`;
+        uploadStatus.style.color = "#ffaa00";
+    } else {
+        uploadStatus.innerText = `${uploadMode === "append" ? "Added" : "Published"} ${validMatters.length} matter(s) from ${parsedFiles}/${files.length} files.`;
+        uploadStatus.style.color = "#39FF14";
+    }
+
+    if (validMatters.length === 0) {
+        uploadStatus.innerText = `No current matters to publish after removing ${removedMatters.length} expired matter(s).`;
+        uploadStatus.style.color = "#ff4444";
+        return;
+    }
+
+    let finalData = validMatters;
     if (uploadMode === "append") {
-        finalData = [...currentMatters, ...mergedData];
-        console.log(`Appending ${mergedData.length} new matters to existing ${currentMatters.length}.`);
+        const { current: existingCurrent, expired: existingExpired } = partitionMattersByExpiry(currentMatters);
+        if (existingExpired.length > 0) {
+            console.log(`Auto-removed ${existingExpired.length} expired existing matter(s).`);
+        }
+        finalData = [...existingCurrent, ...validMatters];
     }
 
     publishMatters(finalData);
-    const parsedFiles = files.length - failedFiles.length;
-    uploadStatus.innerText = `${uploadMode === "append" ? "Added" : "Published"} ${mergedData.length} matters from ${parsedFiles}/${files.length} files. Total: ${finalData.length}`;
-    
+
     // Reset input so the same file can be selected again if needed
     uploadInput.value = "";
 });
@@ -423,3 +497,54 @@ postAnnouncementBtn.addEventListener("click", () => {
     const text = announcementInput.value.trim();
     if (text) push(ref(db, 'announcements'), text).then(() => announcementInput.value = "");
 });
+
+// --- DASHBOARD PREVIEW ---
+let previewVisible = false;
+
+function renderPreview() {
+    if (!previewBody) return;
+    if (currentMatters.length === 0) {
+        previewBody.innerHTML = "<p style='color:#9fb8a5;'>No matters published yet.</p>";
+        return;
+    }
+    const { current, expired } = partitionMattersByExpiry(currentMatters);
+    let html = `<p style="color:#9fb8a5; font-size:0.8rem; margin-bottom:8px;">Showing ${current.length} current matter(s)${expired.length > 0 ? ` (${expired.length} expired hidden)` : ""}.</p>`;
+    html += `<table style="width:100%; border-collapse:collapse; font-size:0.8rem;">`;
+    html += `<thead><tr style="border-bottom:2px solid #cfa92d;">
+        <th style="padding:4px 6px; text-align:left; color:#cfa92d;">Date</th>
+        <th style="padding:4px 6px; text-align:left; color:#cfa92d;">Tribunal</th>
+        <th style="padding:4px 6px; text-align:left; color:#cfa92d;">Officer</th>
+        <th style="padding:4px 6px; text-align:left; color:#cfa92d;">Type</th>
+        <th style="padding:4px 6px; text-align:left; color:#cfa92d;">Case No.</th>
+        <th style="padding:4px 6px; text-align:left; color:#cfa92d;">Time</th>
+    </tr></thead><tbody>`;
+    current.slice(0, 50).forEach((m) => {
+        html += `<tr style="border-bottom:1px solid rgba(207,169,45,0.15);">
+            <td style="padding:3px 6px; color:#fff;">${m.date || "-"}</td>
+            <td style="padding:3px 6px; color:#cfa92d;">${m.tribunal || "-"}</td>
+            <td style="padding:3px 6px; color:#fff;">${m.officer || "-"}</td>
+            <td style="padding:3px 6px; color:#fff;">${m.matterType || "-"}</td>
+            <td style="padding:3px 6px; color:#fff;">${m.caseNo || "-"}</td>
+            <td style="padding:3px 6px; color:#fff;">${m.time || "-"}</td>
+        </tr>`;
+    });
+    if (current.length > 50) {
+        html += `<tr><td colspan="6" style="padding:4px 6px; color:#9fb8a5; text-align:center;">... and ${current.length - 50} more</td></tr>`;
+    }
+    html += `</tbody></table>`;
+    previewBody.innerHTML = html;
+}
+
+if (previewToggleBtn) {
+    previewToggleBtn.addEventListener("click", () => {
+        previewVisible = !previewVisible;
+        if (previewPanel) {
+            previewPanel.style.display = previewVisible ? "block" : "none";
+        }
+        if (previewVisible) {
+            renderPreview();
+        }
+    });
+}
+
+

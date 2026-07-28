@@ -135,11 +135,15 @@
                     <input id="pdfUpload" type="file"
                         accept="application/pdf,.pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                         multiple style="display: none;">
+                    <button id="previewToggleBtn" class="admin-append-btn">Preview Dashboard</button>
                     <button id="newUploadBtn" class="admin-success-btn">New Upload (Replace)</button>
                     <button id="addMoreBtn" class="admin-append-btn">Add More (Append)</button>
                     <button id="clearDataBtn" class="admin-danger-btn">Clear All Matters</button>
                 </div>
                 <span id="uploadStatus">System Ready.</span>
+                <div id="previewPanel" style="display:none; margin-top:15px;">
+                    <div id="previewBody" style="max-height:400px; overflow-y:auto; background:rgba(0,0,0,0.3); border-radius:8px; padding:10px;"></div>
+                </div>
             </section>
 
             <!-- News Management -->
