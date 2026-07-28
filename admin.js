@@ -194,9 +194,20 @@ function rebuildLinesFromTextItems(items) {
         .filter(Boolean);
 }
 
+// Map descriptive tribunal phrases to canonical abbreviations.
+const TRIBUNAL_NAME_MAP = {
+    "RENT RESTRICTION": "RRT",
+    "BUSINESS PREMISES": "BPRT",
+    "TAX APPEAL": "TAT",
+    "ENERGY AND PETROLEUM": "EPT",
+};
+
+// Known tribunal abbreviations that may legitimately appear on a header line.
+const KNOWN_TRIBUNAL_TOKENS = new Set(["TAT", "RRT", "BPRT", "EPT"]);
+
 // Map a case-number prefix to a tribunal name. This is the most reliable
 // per-matter signal, so it is preferred when available.
-// e.g. NAIROBI_RRC/783/2019 -> RRT, BPR/E123/2024 -> BPRT, TATC/E1138/2025 -> TAT
+// e.g. NAIROBI_RRC/783/2019 -> RRT, EPA/E051/2025 -> EPT
 const CASE_PREFIX_MAP = {
     RRC: "RRT",
     RRT: "RRT",
@@ -205,6 +216,8 @@ const CASE_PREFIX_MAP = {
     BPRC: "BPRT",
     TAT: "TAT",
     TATC: "TAT",
+    EPA: "EPT",
+    EPT: "EPT",
 };
 
 function tribunalFromCaseNo(caseNo) {
@@ -215,37 +228,35 @@ function tribunalFromCaseNo(caseNo) {
     return CASE_PREFIX_MAP[prefix] || "";
 }
 
-// Known tribunal abbreviations that may legitimately appear on a header line.
-const KNOWN_TRIBUNAL_TOKENS = new Set(["TAT", "RRT", "BPRT"]);
-
-// Strictly validate a header token as a tribunal NAME.
-// Returns a normalized name only when the text is a recognized tribunal;
-// returns "" for dates, officers, "CAUSE LIST", plain content, etc.
-// This prevents a repeated "MILIMANI HIGH COURT" header (whose 2nd line is
-// NOT a tribunal name) from hijacking the heading.
+// Normalize a header token into a short tribunal name.
+// Accepts any line ending with "TRIBUNAL" that has meaningful content before it.
+// Rejects dates, officer lines, "CAUSE LIST", bare "TRIBUNAL", and "HIGH COURT" headers.
 function normalizeTribunalName(raw) {
     if (!raw) return "";
     const upper = raw.toUpperCase().trim();
 
-    // Descriptive phrases -> canonical abbreviations.
-    if (upper.includes("RENT RESTRICTION")) return "RRT";
-    if (upper.includes("BUSINESS PREMISES")) return "BPRT";
-    if (upper.includes("TAX APPEAL")) return "TAT";
+    // Reject obvious non-names first.
+    if (upper === "TRIBUNAL" || upper === "CAUSE LIST") return "";
+    if (upper.includes("HIGH COURT")) return "";
+    if (upper.includes("HON.") || /^(MR|MRS|MS|DR)\.\s/.test(upper)) return "";
+    if (/\d{4}/.test(upper)) return "";
+    if (/^[A-Z]+,\s+\d/.test(upper)) return "";
 
-    // Reject obvious non-names.
-    if (upper === "TRIBUNAL" || upper === "CAUSE LIST" || upper.includes("HIGH COURT")) return "";
-    if (upper.includes("HON.") || /^(MR|MRS|MS|DR)\.\s/.test(upper)) return "";      // officer line
-    if (/\d{4}/.test(upper)) return "";                                              // dates / case numbers
-    if (/^[A-Z]+,\s+\d/.test(upper)) return "";                                      // "MONDAY, 04 ..."
+    // Check if the line ends with "TRIBUNAL" — if so, it IS a tribunal header.
+    const hasTribunalSuffix = /\s+TRIBUNAL\s*$/i.test(raw);
+    const withoutTribunal = raw.replace(/\s+TRIBUNAL\s*$/i, "").trim();
 
-    // Strip a trailing generic "TRIBUNAL" word: "TAT TRIBUNAL" -> "TAT".
-    const candidate = raw.replace(/\s+TRIBUNAL\s*$/i, "").trim();
-    const candUpper = candidate.toUpperCase();
-
-    // Accept only recognized abbreviations (short tokens) or descriptive
-    // phrases that clearly name a tribunal. Anything else is treated as content.
-    if (KNOWN_TRIBUNAL_TOKENS.has(candUpper)) return candUpper;
-    if (candUpper.includes("TRIBUNAL")) return candidate; // e.g. "SOMETHING TRIBUNAL"
+    if (hasTribunalSuffix && withoutTribunal) {
+        // Map known descriptive phrases to canonical abbreviations.
+        for (const [phrase, abbr] of Object.entries(TRIBUNAL_NAME_MAP)) {
+            if (withoutTribunal.toUpperCase().includes(phrase)) return abbr;
+        }
+        // Known short token (e.g. "TAT", "RRT").
+        const upperTrimmed = withoutTribunal.toUpperCase();
+        if (KNOWN_TRIBUNAL_TOKENS.has(upperTrimmed)) return upperTrimmed;
+        // Accept the text as-is (it's a real tribunal name).
+        return withoutTribunal;
+    }
 
     return "";
 }
@@ -300,7 +311,10 @@ function parseCauseListText(fullText) {
             i++; continue;
         }
 
-        if (line.match(/^[A-Z]+,\s+\d{1,2}\s+[A-Z]+\s+\d{4}$/)) { currentDate = line; i++; continue; }
+        // Match date patterns anywhere in the line (handles trailing page numbers,
+        // watermarks, etc.). Supports ordinal suffixes and case-insensitive day names.
+        const dateMatch = line.match(/([A-Z]+),\s*(\d{1,2}(?:st|nd|rd|th)?)\s+([A-Z]+)\s+(\d{4})/i);
+        if (dateMatch) { currentDate = dateMatch[1].toUpperCase() + ", " + dateMatch[2].replace(/(st|nd|rd|th)$/i, "") + " " + dateMatch[3].toUpperCase() + " " + dateMatch[4]; i++; continue; }
         if (line.match(/^\d{1,2}:\d{2}\s?(AM|PM)$/i)) { currentTime = line.toUpperCase(); i++; continue; }
         if (line.match(/^(HEARING|MENTION|RULING|JUDGMENT|JUDGEMENT)$/i)) { currentMatterType = line.toUpperCase(); i++; continue; }
         if (line.includes("HON.") || line.match(/^(MR|MRS|MS|DR)\.\s/i)) {
