@@ -223,9 +223,20 @@ const CASE_PREFIX_MAP = {
 function tribunalFromCaseNo(caseNo) {
     if (!caseNo) return "";
     const cleaned = caseNo.toUpperCase();
-    const prefixMatch = cleaned.match(/([A-Z]{2,6})\/[A-Z]?\d+\/\d{4}/);
-    const prefix = prefixMatch ? prefixMatch[1] : "";
-    return CASE_PREFIX_MAP[prefix] || "";
+    // Extract everything before the first slash that is followed by a digit
+    // (this is the start of the case number portion).
+    // e.g. "NAIROBI_RRC/783/2019" → prefix "NAIROBI_RRC"
+    //      "EPA/E051/2025"       → prefix "EPA"
+    const slashMatch = cleaned.match(/^(.+?)(?=\/\d)/);
+    const prefix = slashMatch ? slashMatch[1] : "";
+    // Try the full prefix directly.
+    if (CASE_PREFIX_MAP[prefix]) return CASE_PREFIX_MAP[prefix];
+    // Try splitting by underscores and slashes to find a known code segment.
+    const segments = prefix.split(/[_/]/);
+    for (const seg of segments) {
+        if (CASE_PREFIX_MAP[seg]) return CASE_PREFIX_MAP[seg];
+    }
+    return "";
 }
 
 // Normalize a header token into a short tribunal name.
