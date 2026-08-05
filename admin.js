@@ -297,22 +297,51 @@ const TRIBUNAL_NAME_MAP = {
     "ENERGY AND PETROLEUM": "EPT",
 };
 
-// Known tribunal abbreviations that may legitimately appear on a header line.
-const KNOWN_TRIBUNAL_TOKENS = new Set(["TAT", "RRT", "BPRT", "EPT"]);
+// Canonical abbreviation → full tribunal name for display.
+const TRIBUNAL_DISPLAY_NAMES = {
+    BPRT: "Business Premises Rent Tribunal",
+    CMAT: "Communication & Multimedia Appeals Tribunal",
+    CT: "Competition Tribunal",
+    COT: "Co-operatives Tribunal",
+    CRT: "Copyright Tribunal",
+    EAT: "Education Appeals Tribunal",
+    EPT: "Energy and Petroleum Tribunal",
+    FCT: "Financial Center Tribunal",
+    HAT: "HIV & Aids Tribunal",
+    IPT: "Industrial Property Tribunal",
+    LAT: "Land Acquisition Tribunal",
+    LEAT: "Legal Education Appeals Tribunal",
+    MSET: "Micro & Small Enterprises Tribunal",
+    NCAART: "National Civil Aviation Administrative Review Tribunal",
+    NET: "National Environment Tribunal",
+    PPDT: "Political Parties Disputes Tribunal",
+    PPPC: "Public Private Partnerships Petitions Committee",
+    RRT: "Rent Restriction Tribunals",
+    SDT: "Sports Disputes Tribunal",
+    ST: "Standards Tribunal",
+    TAT: "Tax Appeals Tribunal",
+    TLAB: "Transport Licensing Appeal Board",
+    WAB: "Water Appeals Board",
+    TRLAP: "TRLAP",
+};
 
-// Map a case-number prefix to a tribunal name. This is the most reliable
+// Known tribunal abbreviations that may legitimately appear on a header line.
+const KNOWN_TRIBUNAL_TOKENS = new Set([
+    "TAT", "RRT", "BPRT", "EPT", "CMAT", "CT", "COT", "CRT",
+    "EAT", "FCT", "HAT", "IPT", "LAT", "LEAT", "MSET", "NCAART",
+    "NET", "PPDT", "PPPC", "SDT", "ST", "TLAB", "WAB", "TRLAP"
+]);
+
+// Map a case-number prefix to a tribunal abbreviation. This is the most reliable
 // per-matter signal, so it is preferred when available.
 // e.g. NAIROBI_RRC/783/2019 -> RRT, EPA/E051/2025 -> EPT
 const CASE_PREFIX_MAP = {
-    RRC: "RRT",
-    RRT: "RRT",
-    BPR: "BPRT",
-    BPRT: "BPRT",
-    BPRC: "BPRT",
-    TAT: "TAT",
-    TATC: "TAT",
-    EPA: "EPT",
-    EPT: "EPT",
+    RRC: "RRT", RRT: "RRT", BPR: "BPRT", BPRT: "BPRT", BPRC: "BPRT",
+    TAT: "TAT", TATC: "TAT", EPA: "EPT", EPT: "EPT",
+    CMAT: "CMAT", CT: "CT", COT: "COT", CRT: "CRT", EAT: "EAT",
+    FCT: "FCT", HAT: "HAT", IPT: "IPT", LAT: "LAT", LEAT: "LEAT",
+    MSET: "MSET", NCAART: "NCAART", NET: "NET", PPDT: "PPDT",
+    PPPC: "PPPC", SDT: "SDT", ST: "ST", TLAB: "TLAB", WAB: "WAB",
     TRLAP: "TRLAP",
 };
 
@@ -373,6 +402,12 @@ function cleanOfficer(raw) {
         .replace(/\s+/g, " ")
         .replace(/[,;]\s*$/, "")
         .trim();
+}
+
+function tribunalDisplayName(abbr) {
+    if (!abbr) return "-";
+    const upper = String(abbr).toUpperCase().trim();
+    return TRIBUNAL_DISPLAY_NAMES[upper] || abbr;
 }
 
 function parseCauseListText(fullText) {
@@ -540,7 +575,7 @@ function renderPreview() {
         const originalIdx = currentMatters.indexOf(m);
         html += `<tr style="border-bottom:1px solid rgba(207,169,45,0.15);">
             <td style="padding:3px 6px; color:#fff;">${m.date || "-"}</td>
-            <td style="padding:3px 6px; color:#cfa92d;">${m.tribunal || "-"}</td>
+            <td style="padding:3px 6px; color:#cfa92d;" title="${m.tribunal || ""}">${tribunalDisplayName(m.tribunal)}</td>
             <td style="padding:3px 6px; color:#fff;">${m.officer || "-"}</td>
             <td style="padding:3px 6px; color:#fff;">${m.matterType || "-"}</td>
             <td style="padding:3px 6px; color:#fff;">${m.caseNo || "-"}</td>
