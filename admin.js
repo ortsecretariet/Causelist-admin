@@ -322,6 +322,7 @@ const TRIBUNAL_DISPLAY_NAMES = {
     TAT: "Tax Appeals Tribunal",
     TLAB: "Transport Licensing Appeal Board",
     WAB: "Water Appeals Board",
+    TRWAC: "Water Tribunal",
     TRLAP: "TRLAP",
 };
 
@@ -329,7 +330,7 @@ const TRIBUNAL_DISPLAY_NAMES = {
 const KNOWN_TRIBUNAL_TOKENS = new Set([
     "TAT", "RRT", "BPRT", "EPT", "CMAT", "CT", "COT", "CRT",
     "EAT", "FCT", "HAT", "IPT", "LAT", "LEAT", "MSET", "NCAART",
-    "NET", "PPDT", "PPPC", "SDT", "ST", "TLAB", "WAB", "TRLAP"
+    "NET", "PPDT", "PPPC", "SDT", "ST", "TLAB", "WAB", "TRWAC", "TRLAP"
 ]);
 
 // Map a case-number prefix to a tribunal abbreviation. This is the most reliable
@@ -342,7 +343,7 @@ const CASE_PREFIX_MAP = {
     FCT: "FCT", HAT: "HAT", IPT: "IPT", LAT: "LAT", LEAT: "LEAT",
     MSET: "MSET", NCAART: "NCAART", NET: "NET", PPDT: "PPDT",
     PPPC: "PPPC", SDT: "SDT", ST: "ST", TLAB: "TLAB", WAB: "WAB",
-    TRLAP: "TRLAP",
+    TRWAC: "TRWAC", TRLAP: "TRLAP",
 };
 
 function tribunalFromCaseNo(caseNo) {
